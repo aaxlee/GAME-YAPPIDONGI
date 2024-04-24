@@ -1,8 +1,12 @@
 let canvas = document.getElementById("canvas");
 let ctx = canvas.getContext("2d");
 
+let lostHealth = 0;
+let healthbar = document.getElementById("healthbar");
+healthbar.style.width = 900 - lostHealth + "px";
+
 const WIDTH = 900;
-const HEIGHT = 600;
+const HEIGHT = 450;
 
 const size = 10;
 const movespeed = 3;
@@ -80,6 +84,10 @@ class Bot {
     };
     this.teleportAttack = {
       used: false,
+      target : {
+        x: 0,
+        y: 0
+      },
       cooldown: 12,
       iterations: 0
     };
@@ -89,22 +97,24 @@ class Bot {
     ctx.fillRect(this.x, this.y, this.size, this.size);
     ctx.stroke();
   }
-  moveTo(player, speed) {
-    if (this.x != player.x && this.y != player.y) {
+  follow(player, speed) {
+    if (!collision(this.x, this.y, this,size, player.x, player.y, player.width)) {
       let angle = Math.atan2(player.y - this.y, player.x - this.x);
       let x = Math.cos(angle);
       let y = Math.sin(angle);
       this.x += x * speed;
       this.y += y * speed;
+    } else if (collision(this.x, this.y, this,size, player.x, player.y, player.width)) {
+      return;
     }
   }
 }
 
 class Projectile {
-  constructor(x, y, dx, size, speed, angle) {
+  constructor(x, y, direction, size, speed, angle) {
     this.x = x;
     this.y = y;
-    this.dx = dx
+    this.direction = direction
     this.size = size;
     this.speed = speed;
     this.angle = angle;
@@ -140,7 +150,7 @@ enemy.y = generateCoordinate(HEIGHT - enemy.size);
 
 let projectileIndex = 0;
 let projectileArray = [];
-let projectile = new Projectile(0, 0, 1, 5, 12, -1);  // -1 angle is placeholder
+// let projectile = new Projectile(0, 0, 1, 5, 12, -1);  // -1 angle is placeholder
 
 let circleAttackArray = [];
 let circleAttackIndex = 0;
@@ -191,9 +201,9 @@ window.addEventListener("keydown", function(e) {
       currentProjectileAttack.x = enemy.x; //+ size/2;
       currentProjectileAttack.y = enemy.y + (enemy.size / 2);
       if (player.x < currentProjectileAttack.x) {
-        currentProjectileAttack.dx = -1;
+        currentProjectileAttack.direction = -1;
       } else if (player.x > currentProjectileAttack.x) {
-        currentProjectileAttack.dx = 1;
+        currentProjectileAttack.direction = 1;
       }
       projectileIndex++;
       break;
@@ -324,10 +334,6 @@ function animate(timestamp) {
 
       player.parry.iterations++;
       
-      if (collision(player.parry.hitbox.x, player.parry.hitbox.y, 
-        player.parry.hitbox.size, projectile.x, projectile.y, projectile.size)) {
-          console.log("parry");
-      }
       ctx.beginPath();
       ctx.fillRect(player.parry.hitbox.x, player.parry.hitbox.y, player.parry.hitbox.size, player.parry.hitbox.size);
       ctx.stroke();
@@ -339,13 +345,30 @@ function animate(timestamp) {
 
   // attack
   if (enemy.projectile.used) {
-    projectileArray.forEach(projectile => {
-      projectile.x += projectile.speed * projectile.dx;
+    // projectileArray.forEach(projectile => {
+    //   projectile.x += projectile.speed * projectile.direction;
 
-      ctx.beginPath();
-      ctx.fillRect(projectile.x, projectile.y, 5, 5);
-      ctx.stroke();
-    })
+    //   if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT) {
+    //     unset(projectile);
+    //     projectileIndex -= 1;
+    //   } else {
+    //     ctx.beginPath();
+    //     ctx.fillRect(projectile.x, projectile.y, 5, 5);
+    //     ctx.stroke();
+    //   }
+    // })
+    for (let index = 0; index < projectileArray.length; index++) {
+      let projectile = projectileArray[index];
+      if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT) {
+        projectileArray.splice(index, 1);
+        projectileIndex -= 1;
+      } else {
+        projectile.x += projectile.speed * projectile.direction;
+        ctx.beginPath();
+        ctx.fillRect(projectile.x, projectile.y, 5, 5);
+        ctx.stroke();
+      }
+    }
   }
 
   if (enemy.attack1.used) {
@@ -364,23 +387,35 @@ function animate(timestamp) {
     if (enemy.teleportAttack.iterations <= 1) {
       enemy.x = generateCoordinate(WIDTH);
       enemy.y = generateCoordinate(HEIGHT);
+      enemy.teleportAttack.target.x = player.x;
+      enemy.teleportAttack.target.y = player.y;
       enemy.teleportAttack.iterations++;
     } else if (enemy.teleportAttack.iterations >= 1 && enemy.teleportAttack.iterations <= 30) {
-      enemy.moveTo(player, enemy.speed * 10);
-      enemy.teleportAttack.iterations++
+      let target = {
+        x: enemy.teleportAttack.target.x,
+        y: enemy.teleportAttack.target.y
+      };
+      // if the follow up-attack reaches the target early end the attack
+      if (collision(enemy.x, enemy.y, enemy.size, target.x, target.y, size)) {
+        enemy.teleportAttack.used = false;
+        enemy.teleportAttack.iterations = 0;
+      } else {  // else continue as normal
+        enemy.follow(target, enemy.speed * 10);
+        enemy.teleportAttack.iterations++
+      }
     } else if (enemy.teleportAttack.iterations >= 30) {
-      console.log("hello");
       enemy.teleportAttack.used = false;
       enemy.teleportAttack.iterations = 0;
     }
   }
 
-  // if player got hit
-  
 
   if (!enemy.teleportAttack.used) {
-    enemy.moveTo(player, enemy.speed);
+    enemy.follow(player, enemy.speed);
   }
+
+  // check if player got hit
+
 
   // draw player
   player.draw();
