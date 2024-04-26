@@ -303,7 +303,14 @@ function handleEnemyTeleportAttack() {
 }
 
 function handlePlayerCollision() {
-
+  // single attack
+  for (let index = 0; index < projectileArray.length; index++) {
+    let projectile = projectileArray[index];
+    if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
+      lostHealth += 100;
+      console.log("hit");
+    }
+  }
 }
 
 function drawObjects() {
@@ -428,8 +435,6 @@ function animate(timestamp) {
   if (!enemy.teleportAttack.used) {
     enemy.follow(player, enemy.speed);
   }
-
-  // check if player got hit
 
   drawObjects();
 
