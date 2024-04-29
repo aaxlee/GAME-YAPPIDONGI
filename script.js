@@ -3,7 +3,6 @@ let ctx = canvas.getContext("2d");
 
 let lostHealth = 0;
 let healthbar = document.getElementById("healthbar");
-healthbar.style.width = 900 - lostHealth + "px";
 
 const WIDTH = 900;
 const HEIGHT = 450;
@@ -247,10 +246,11 @@ function handleEnemySingleAttack() {
   if (enemy.projectile.used) {
     for (let index = 0; index < projectileArray.length; index++) {
       let projectile = projectileArray[index];
+      // if projectile is outside border
       if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT) {
         projectileArray.splice(index, 1);
         projectileIndex -= 1;
-      } else {
+      } else { // else draw it
         projectile.x += projectile.speed * projectile.direction;
         ctx.beginPath();
         ctx.fillRect(projectile.x, projectile.y, 5, 5);
@@ -263,16 +263,27 @@ function handleEnemySingleAttack() {
 function handleEnemyCircleAttack() {
   if (enemy.attack1.used) {
     circleAttackArray.forEach(attack => {
-      attack.forEach(projectile => {
-        ctx.beginPath();
-        ctx.fillRect(projectile.x, projectile.y , projectile.size, projectile.size);
-        ctx.stroke();
-        projectile.x += Math.cos(projectile.angle) * projectile.speed;
-        projectile.y += Math.sin(projectile.angle) * projectile.speed;
-      })
-    })
+      let projectilesToRemove = [];
+      attack.forEach((projectile, index) => {
+        // Remove projectile if out of bounds
+        if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT) {
+          projectilesToRemove.push(index);
+        } else {
+          projectile.x += Math.cos(projectile.angle) * projectile.speed;
+          projectile.y += Math.sin(projectile.angle) * projectile.speed;
+          ctx.beginPath();
+          ctx.fillRect(projectile.x, projectile.y, projectile.size, projectile.size);
+          ctx.stroke();
+        }
+      });
+      // Remove projectiles marked for removal
+      projectilesToRemove.forEach(index => {
+        attack.splice(index, 1);
+      });
+    });
   }
 }
+
 
 function handleEnemyTeleportAttack() {
   if (enemy.teleportAttack.used) {
@@ -308,8 +319,12 @@ function handlePlayerCollision() {
     let projectile = projectileArray[index];
     if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
       lostHealth += 100;
+      healthbar.style.width = 900 - lostHealth + "px";
       console.log("hit");
     }
+  }
+  for (let index = 0; index < circleAttackArray.length; index++) {
+
   }
 }
 
@@ -329,7 +344,6 @@ let projectileArray = [];
 
 let circleAttackArray = [];
 let circleAttackIndex = 0;
-let circleAttack = [];
 
 window.addEventListener("keyup", function(e) {
   switch (e.key) {
@@ -373,7 +387,7 @@ window.addEventListener("keydown", function(e) {
       projectileArray.push(projectile);
 
       let currentProjectileAttack = projectileArray[projectileIndex];
-      currentProjectileAttack.x = enemy.x; //+ size/2;
+      currentProjectileAttack.x = enemy.x;
       currentProjectileAttack.y = enemy.y + (enemy.size / 2);
       if (player.x < currentProjectileAttack.x) {
         currentProjectileAttack.direction = -1;
@@ -392,6 +406,9 @@ window.addEventListener("keydown", function(e) {
       circleAttackArray.push(circleAttack);
 
       let currentCircleAttack = circleAttackArray[circleAttackIndex]
+
+      console.log(circleAttackArray);
+
       currentCircleAttack.forEach(projectile => {
         projectile.x = enemy.x;
         projectile.y = enemy.y;
