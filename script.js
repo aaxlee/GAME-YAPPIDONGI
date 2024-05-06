@@ -13,6 +13,7 @@ const movespeed = 3;
 class Player {
   constructor() {
     this.health = 100;
+    this.hit = false;
     this.x = WIDTH / 2;
     this.y = HEIGHT / 2;
     this.width = size;
@@ -63,6 +64,7 @@ class Bot {
     this.y = 0;
     this.speed = 1;
     this.size = size;
+    this.attackCooldown;
     this.direction = {
       up: false,
       down: false,
@@ -71,14 +73,14 @@ class Bot {
     };
     this.projectile = {
       used: false,
-      isAlive: false,
-      cooldown: 12,
+      array: [],
+      index: 0,
       iterations: 0
     };
     this.attack1 = {
       used: false,
-      isAlive: false,
-      cooldown: 12,
+      array: [],
+      index: 0,
       iterations: 0
     };
     this.teleportAttack = {
@@ -242,14 +244,33 @@ function handleParry() {
   }
 }
 
+function createSingleAttack() {
+  enemy.projectile.used = true;
+
+  let projectile = new Projectile(0, 0, 1, 5, 12, -1)
+  enemy.projectile.array.push(projectile);
+
+  let currentProjectileAttack = enemy.projectile.array[enemy.projectile.index];
+  currentProjectileAttack.x = enemy.x;
+  currentProjectileAttack.y = enemy.y + (enemy.size / 2);
+  if (player.x < currentProjectileAttack.x) {
+    currentProjectileAttack.direction = -1;
+  } else if (player.x > currentProjectileAttack.x) {
+    currentProjectileAttack.direction = 1;
+  }
+  enemy.projectile.index++;
+}
+
 function handleEnemySingleAttack() {
   if (enemy.projectile.used) {
-    for (let index = 0; index < projectileArray.length; index++) {
-      let projectile = projectileArray[index];
+    for (let index = 0; index < enemy.projectile.array.length; index++) {
+      let projectile = enemy.projectile.array[index];
       // if projectile is outside border
-      if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT) {
-        projectileArray.splice(index, 1);
-        projectileIndex -= 1;
+      if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT ||
+        collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)
+      ) {
+        enemy.projectile.array.splice(index, 1);
+        enemy.projectile.index -= 1;
       } else { // else draw it
         projectile.x += projectile.speed * projectile.direction;
         ctx.beginPath();
@@ -260,15 +281,35 @@ function handleEnemySingleAttack() {
   }
 }
 
+function createCircleAttack() {
+  enemy.attack1.used = true;
+
+  let circleAttack = [];
+  for (let degrees = 0; degrees <= 360; degrees += 15) {
+    circleAttack.push(new Projectile(0, 0, 2, 5, 3, degrees));
+  }
+  enemy.attack1.array.push(circleAttack);
+
+  let currentCircleAttack = enemy.attack1.array[enemy.attack1.index]
+
+  currentCircleAttack.forEach(projectile => {
+    projectile.x = enemy.x;
+    projectile.y = enemy.y;
+  })
+  enemy.attack1.index++;
+}
+
 function handleEnemyCircleAttack() {
   if (enemy.attack1.used) {
-    circleAttackArray.forEach(attack => {
+    enemy.attack1.array.forEach(attack => {
       let projectilesToRemove = [];
       attack.forEach((projectile, index) => {
-        // Remove projectile if out of bounds
-        if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT) {
+        // Remove projectile if out of bounds or hit player
+        if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT ||
+            collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)
+        ) {
           projectilesToRemove.push(index);
-        } else {
+        } else { // else move and draw projectile
           projectile.x += Math.cos(projectile.angle) * projectile.speed;
           projectile.y += Math.sin(projectile.angle) * projectile.speed;
           ctx.beginPath();
@@ -287,7 +328,7 @@ function handleEnemyCircleAttack() {
 
 function handleEnemyTeleportAttack() {
   if (enemy.teleportAttack.used) {
-    if (enemy.teleportAttack.iterations <= 1) {
+    if (enemy.teleportAttack.iterations < 1) {
       enemy.x = generateCoordinate(WIDTH);
       enemy.y = generateCoordinate(HEIGHT);
       enemy.teleportAttack.target.x = player.x;
@@ -313,18 +354,40 @@ function handleEnemyTeleportAttack() {
   }
 }
 
-function handlePlayerCollision() {
+function handleHits() {
   // single attack
-  for (let index = 0; index < projectileArray.length; index++) {
-    let projectile = projectileArray[index];
+  for (let index = 0; index < enemy.projectile.array.length; index++) {
+    let projectile = enemy.projectile.array[index];
     if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
-      lostHealth += 100;
-      healthbar.style.width = 900 - lostHealth + "px";
-      console.log("hit");
+      player.hit = true;
     }
   }
-  for (let index = 0; index < circleAttackArray.length; index++) {
+  // circle attack
+  enemy.attack1.array.forEach(attack => {
+    attack.forEach(projectile => {
+      if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
+        player.hit = true;
+      }
+    })
+  })
+  // teleport attack
+  if (collision(player.x, player.y, player.width, enemy.x, enemy.y, enemy.size)) {
+    player.hit = true;
+  }
+}
 
+function randomizeEnemyAttack() {
+  let num = Math.floor(Math.random() * 3)
+  switch(num) {
+    case 1:
+      enemy.projectile.used = true;
+      break;
+    case 2:
+      enemy.attack1.used = true;
+      break;
+    case 3:
+      enemy.teleportAttack.used = true;
+      break;
   }
 }
 
@@ -338,12 +401,6 @@ let player = new Player;
 let enemy = new Bot;
 enemy.x = generateCoordinate(WIDTH - enemy.size);
 enemy.y = generateCoordinate(HEIGHT - enemy.size);
-
-let projectileIndex = 0;
-let projectileArray = [];
-
-let circleAttackArray = [];
-let circleAttackIndex = 0;
 
 window.addEventListener("keyup", function(e) {
   switch (e.key) {
@@ -381,39 +438,10 @@ window.addEventListener("keydown", function(e) {
       player.direction.down = true;
       break;
     case "w":
-      enemy.projectile.used = true;
-
-      let projectile = new Projectile(0, 0, 1, 5, 12, -1)
-      projectileArray.push(projectile);
-
-      let currentProjectileAttack = projectileArray[projectileIndex];
-      currentProjectileAttack.x = enemy.x;
-      currentProjectileAttack.y = enemy.y + (enemy.size / 2);
-      if (player.x < currentProjectileAttack.x) {
-        currentProjectileAttack.direction = -1;
-      } else if (player.x > currentProjectileAttack.x) {
-        currentProjectileAttack.direction = 1;
-      }
-      projectileIndex++;
+      createSingleAttack();
       break;
     case "e":
-      enemy.attack1.used = true;
-
-      let circleAttack = [];
-      for (let i = 0; i <= 360; i += 15) {
-        circleAttack.push(new Projectile(0, 0, 2, 5, 3, i));
-      }
-      circleAttackArray.push(circleAttack);
-
-      let currentCircleAttack = circleAttackArray[circleAttackIndex]
-
-      console.log(circleAttackArray);
-
-      currentCircleAttack.forEach(projectile => {
-        projectile.x = enemy.x;
-        projectile.y = enemy.y;
-      })
-      circleAttackIndex++;
+      createCircleAttack();
       break;
     case "c":
       enemy.teleportAttack.used = true;
@@ -447,11 +475,25 @@ function animate(timestamp) {
   handleEnemySingleAttack();
   handleEnemyCircleAttack();
   handleEnemyTeleportAttack();
-  handlePlayerCollision();
+
+  if (enemy.attackCooldown == 50) {
+    randomizeEnemyAttack();
+  }
+
+  if (!player.immunityFrames.active) {
+    handleHits();
+  }
+  if (player.hit) {
+    lostHealth += 100;
+    healthbar.style.width = 900 - lostHealth + "px";
+    player.hit = false;
+  }
 
   if (!enemy.teleportAttack.used) {
     enemy.follow(player, enemy.speed);
   }
+
+  enemy.attackCooldown++;
 
   drawObjects();
 
