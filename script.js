@@ -316,10 +316,8 @@ function handleEnemyCircleAttackNew() {
 
 function handleProjectiles() {
   for (let i = enemy.projectiles.length - 1; i >= 0; i--) {
-    const projectile = enemy.projectiles[i];
-    if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT
-      || collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)
-    ) {
+    let projectile = enemy.projectiles[i];
+    if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT) {
       console.log("delete");
       enemy.projectiles.splice(i, 1);
     }
@@ -377,11 +375,18 @@ function handleHits() {
 }
 
 function handleHitsNew() {
-  enemy.projectiles.forEach(projectile => {
+  // hit by projectile
+  for (let i = enemy.projectiles.length - 1; i >= 0; i--) {
+    let projectile = enemy.projectiles[i];
     if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
       player.hit = true;
+      enemy.projectiles.splice(i, 1);
     }
-  })
+  }
+  // hit by enemy
+  if (collision(enemy.x, enemy.y, enemy.size, player.x, player.y, player.width)) {
+    player.hit = true;
+  }
 }
 
 function randomizeEnemyAttack() {
@@ -492,18 +497,13 @@ function animate(timestamp) {
   handleBorder();
   handleDash();
   handleParry();
-  // handleEnemySingleAttack();
   handleSingleAttackNew();
-  // handleEnemyCircleAttack();
   handleEnemyCircleAttackNew();
-  handleProjectiles();
   handleEnemyTeleportAttack();
-
-
   if (!player.immunityFrames.active) {
-    // handleHits();
     handleHitsNew();
   }
+  handleProjectiles();
   if (player.hit) {
     lostHealth += 30;
     healthbar.style.width = 900 - lostHealth + "px";
