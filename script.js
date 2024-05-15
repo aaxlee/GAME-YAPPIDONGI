@@ -74,14 +74,10 @@ class Bot {
     };
     this.projectile = {
       used: false,
-      array: [],
-      index: 0,
       iterations: 0
     };
     this.attack1 = {
       used: false,
-      array: [],
-      index: 0,
       iterations: 0
     };
     this.teleportAttack = {
@@ -255,27 +251,27 @@ function createSingleAttack() {
   enemy.projectile.used = true;
 
   let projectile = new Projectile(0, 0, 1, 5, 12, -1)
-  enemy.projectile.array.push(projectile);
-  enemy.projectiles.push(projectile);
 
-  let currentProjectileAttack = enemy.projectile.array[enemy.projectile.index];
-  currentProjectileAttack.x = enemy.x;
-  currentProjectileAttack.y = enemy.y + (enemy.size / 2);
-  if (player.x < currentProjectileAttack.x) {
-    currentProjectileAttack.direction = -1;
-  } else if (player.x > currentProjectileAttack.x) {
-    currentProjectileAttack.direction = 1;
+
+  projectile.x = enemy.x;
+  projectile.y = enemy.y + (enemy.size / 2);
+  if (player.x < projectile.x) {
+    projectile.direction = -1;
+  } else if (player.x > projectile.x) {
+    projectile.direction = 1;
   }
-  enemy.projectile.index++;
+  enemy.projectiles.push(projectile);
 }
 
 function handleSingleAttackNew() {
   if (enemy.projectile.used) {
-    enemy.projectile.array.forEach(projectile => {
-      projectile.x += projectile.speed * projectile.direction;
-      ctx.beginPath();
-      ctx.fillRect(projectile.x, projectile.y, 5, 5);
-      ctx.stroke();
+    enemy.projectiles.forEach(projectile => {
+      if (projectile.angle = -1) {
+        projectile.x += projectile.speed * projectile.direction;
+        ctx.beginPath();
+        ctx.fillRect(projectile.x, projectile.y, 5, 5);
+        ctx.stroke();
+      }
     })
   }
 }
@@ -283,33 +279,22 @@ function handleSingleAttackNew() {
 function createCircleAttack() {
   enemy.attack1.used = true;
 
-  let circleAttack = [];
   for (let degrees = 0; degrees <= 360; degrees += 15) {
-    let projectile = new Projectile(0, 0, 2, 5, 3, degrees);
-    circleAttack.push(projectile);
+    let projectile = new Projectile(enemy.x, enemy.y, 2, 5, 3, degrees);
     enemy.projectiles.push(projectile);
   }
-  enemy.attack1.array.push(circleAttack);
-
-  let currentCircleAttack = enemy.attack1.array[enemy.attack1.index]
-
-  currentCircleAttack.forEach(projectile => {
-    projectile.x = enemy.x;
-    projectile.y = enemy.y;
-  })
-  enemy.attack1.index++;
 }
 
 function handleEnemyCircleAttackNew() {
   if (enemy.attack1.used) {
-    enemy.attack1.array.forEach(attack => {
-      attack.forEach(projectile => {
+    enemy.projectiles.forEach(projectile => {
+      if (projectile.angle != -1) {
         projectile.x += Math.cos(projectile.angle) * projectile.speed;
         projectile.y += Math.sin(projectile.angle) * projectile.speed;
         ctx.beginPath();
         ctx.fillRect(projectile.x, projectile.y, projectile.size, projectile.size);
         ctx.stroke();
-      })
+      }
     })
   }
   }
@@ -500,6 +485,9 @@ function animate(timestamp) {
   handleSingleAttackNew();
   handleEnemyCircleAttackNew();
   handleEnemyTeleportAttack();
+
+  console.log(enemy.projectiles.length)
+
   if (!player.immunityFrames.active) {
     handleHitsNew();
   }
