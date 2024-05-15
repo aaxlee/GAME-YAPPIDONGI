@@ -8,7 +8,7 @@ const WIDTH = 900;
 const HEIGHT = 450;
 
 const size = 10;
-const movespeed = 3;
+const movespeed = 2;
 
 class Player {
   constructor() {
@@ -73,12 +73,10 @@ class Bot {
       right: false
     };
     this.projectile = {
-      used: false,
-      iterations: 0
+      cooldown: 0
     };
     this.attack1 = {
-      used: false,
-      iterations: 0
+      cooldown: 0
     };
     this.teleportAttack = {
       used: false,
@@ -194,7 +192,7 @@ function handleBorder() {
 function handleDash() {
   if (player.dash.using) {
     player.immunityFrames.active = true;
-    if (player.dash.iterations < 17) {
+    if (player.dash.iterations < 10) {
       if (player.direction.right) {
         player.x += player.dash.distance;
       }
@@ -247,14 +245,10 @@ function handleParry() {
 }
 
 function createSingleAttack() {
-
-  enemy.projectile.used = true;
-
   let projectile = new Projectile(0, 0, 1, 5, 12, -1)
 
-
   projectile.x = enemy.x;
-  projectile.y = enemy.y + (enemy.size / 2);
+  projectile.y = enemy.y
   if (player.x < projectile.x) {
     projectile.direction = -1;
   } else if (player.x > projectile.x) {
@@ -263,30 +257,15 @@ function createSingleAttack() {
   enemy.projectiles.push(projectile);
 }
 
-function handleSingleAttackNew() {
-  if (enemy.projectile.used) {
-    enemy.projectiles.forEach(projectile => {
-      if (projectile.angle = -1) {
-        projectile.x += projectile.speed * projectile.direction;
-        ctx.beginPath();
-        ctx.fillRect(projectile.x, projectile.y, 5, 5);
-        ctx.stroke();
-      }
-    })
-  }
-}
-
 function createCircleAttack() {
-  enemy.attack1.used = true;
-
   for (let degrees = 0; degrees <= 360; degrees += 15) {
     let projectile = new Projectile(enemy.x, enemy.y, 2, 5, 3, degrees);
     enemy.projectiles.push(projectile);
   }
 }
 
-function handleEnemyCircleAttackNew() {
-  if (enemy.attack1.used) {
+function drawAttacks() {
+  
     enemy.projectiles.forEach(projectile => {
       if (projectile.angle != -1) {
         projectile.x += Math.cos(projectile.angle) * projectile.speed;
@@ -294,9 +273,13 @@ function handleEnemyCircleAttackNew() {
         ctx.beginPath();
         ctx.fillRect(projectile.x, projectile.y, projectile.size, projectile.size);
         ctx.stroke();
+      } else if (projectile.angle == -1) {
+        projectile.x += projectile.speed * projectile.direction;
+        ctx.beginPath();
+        ctx.fillRect(projectile.x, projectile.y, 5, 5);
+        ctx.stroke();
       }
     })
-  }
   }
 
 function handleProjectiles() {
@@ -327,7 +310,7 @@ function handleEnemyTeleportAttack() {
         enemy.teleportAttack.used = false;
         enemy.teleportAttack.iterations = 0;
       } else {  // else continue as normal
-        enemy.follow(target, enemy.speed * 10);
+        enemy.follow(target, enemy.speed * 5);
         enemy.teleportAttack.iterations++
       }
     } else if (enemy.teleportAttack.iterations >= 30) {
@@ -417,6 +400,9 @@ window.addEventListener("keyup", function(e) {
     case "ArrowDown":
       player.direction.down = false;
       break;
+    case "f":
+      player.parry.using = false;
+      break;
   }
 })
 
@@ -469,7 +455,7 @@ function animate(timestamp) {
 
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-  // if (enemy.attackCooldown == 75) {
+  // if (enemy.attackCooldown == 100) {
   //   randomizeEnemyAttack();
   //   console.log(enemy.projectile.used);
   //   console.log(enemy.attack1.used);
@@ -478,15 +464,20 @@ function animate(timestamp) {
   // }
   // enemy.attackCooldown++;
 
+  if (enemy.attack1.cooldown == 100) {
+    createCircleAttack();
+    enemy.attack1.cooldown = 0;
+  }
+  enemy.attack1.cooldown++;
+
   handleMovement();
   handleBorder();
   handleDash();
   handleParry();
-  handleSingleAttackNew();
-  handleEnemyCircleAttackNew();
+  drawAttacks();
   handleEnemyTeleportAttack();
 
-  console.log(enemy.projectiles.length)
+  console.log(enemy.attack1.used);
 
   if (!player.immunityFrames.active) {
     handleHitsNew();
