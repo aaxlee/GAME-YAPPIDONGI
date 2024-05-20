@@ -1,12 +1,12 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
-const startButton = document.getElementById("start-button");
-let menu = document.getElementById("menu");
-let game = document.getElementById("game");
+const startButton = document.getElementById("startButton");
+let menu = document.getElementById("start-menu");
+const canvasContainer = document.getElementById("canvas-container");
 
 let lostHealth = 0;
-let healthbarContainer = document.getElementById("healthbar-container");
+let healthbarContainer = document.querySelector(".healthbar-container");
 const healthbar = document.getElementById("healthbar");
 
 const WIDTH = 900;
@@ -343,7 +343,7 @@ function handleHitsNew() {
       if (collision(player.parry.hitbox.x, player.parry.hitbox.y, player.parry.hitbox.size,
           projectile.x, projectile.y, projectile.size)) {
             // enemy.projectiles.splice(i, 1);
-            projectile.angle = 180 + projectile.angle;
+            projectile.angle += 180;
             continue;
           }
     }
@@ -484,9 +484,17 @@ function animate(timestamp) {
   requestAnimationFrame(animate);
 }
 
+document.getElementById("settingsButton").addEventListener("click", function() {
+  document.querySelector(".settings-menu").style.display = "block";
+});
+
+document.getElementById("closeSettings").addEventListener("click", function() {
+  document.querySelector(".settings-menu").style.display = "none";
+});
+
 startButton.addEventListener("click", function() {
   menu.style.display = "none";
-  game.style.display = "flex";
+  canvasContainer.style.display = "block";
   healthbarContainer.style.display = "flex";
   animate();
 })

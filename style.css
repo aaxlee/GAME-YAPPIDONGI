@@ -1,7 +1,8 @@
-.canvas-container {
+#canvas-container {
   display: flex;
   justify-content: center;
   align-items: space-evenly;
+  display: none;
 }
 
 #canvas {
@@ -12,12 +13,51 @@
   display: flex;
   justify-content: space-evenly;
   align-items: center;
+  display: none; /* Initially hidden */
 }
 
 #healthbar {
   background-color: red;
   width: 900px;
   height: 20px;
-  margin-top: 5px;
   border: 2px solid black;
+}
+
+.menu-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 90vh;
+}
+
+#startButton {
+  padding: 10px 20px;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.settings-menu {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.settings-menu h2 {
+  margin-bottom: 10px;
+}
+
+.settings-menu label {
+  display: inline-block;
+  margin-bottom: 5px;
+}
+
+.settings-menu button {
+  margin-top: 10px;
 }
