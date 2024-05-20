@@ -9,6 +9,10 @@ let lostHealth = 0;
 let healthbarContainer = document.querySelector(".healthbar-container");
 const healthbar = document.getElementById("healthbar");
 
+let difficulty = document.getElementById("difficulty");
+
+let enemyCooldown = 100; // 100 is default value (easy difficulty)
+
 const WIDTH = 900;
 const HEIGHT = 450;
 
@@ -452,7 +456,7 @@ function animate(timestamp) {
 
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-  if (enemy.attack1.cooldown == 100) {
+  if (enemy.attack1.cooldown == enemyCooldown) {
     createCircleAttack();
     enemy.attack1.cooldown = 0;
   }
@@ -496,5 +500,18 @@ startButton.addEventListener("click", function() {
   menu.style.display = "none";
   canvasContainer.style.display = "block";
   healthbarContainer.style.display = "flex";
+
+  switch (difficulty.value) {
+    case "Easy":
+      enemyCooldown = 100;
+      break;
+    case "Medium":
+      enemyCooldown = 70
+      break;
+    case "Hard":
+      enemyCooldown = 45;
+      break;
+  }
+
   animate();
 })

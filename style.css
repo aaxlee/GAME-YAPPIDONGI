@@ -1,3 +1,10 @@
+#start-menu {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+}
+
 #canvas-container {
   display: flex;
   justify-content: center;
@@ -31,8 +38,6 @@
 }
 
 #startButton {
-  padding: 10px 20px;
-  font-size: 20px;
   cursor: pointer;
 }
 
