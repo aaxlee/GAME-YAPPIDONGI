@@ -1,8 +1,13 @@
-let canvas = document.getElementById("canvas");
-let ctx = canvas.getContext("2d");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const startButton = document.getElementById("start-button");
+let menu = document.getElementById("menu");
+let game = document.getElementById("game");
 
 let lostHealth = 0;
-let healthbar = document.getElementById("healthbar");
+let healthbarContainer = document.getElementById("healthbar-container");
+const healthbar = document.getElementById("healthbar");
 
 const WIDTH = 900;
 const HEIGHT = 450;
@@ -271,7 +276,6 @@ function handleProjectiles() {
   for (let i = enemy.projectiles.length - 1; i >= 0; i--) {
     let projectile = enemy.projectiles[i];
     if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT) {
-      console.log("delete");
       enemy.projectiles.splice(i, 1);
     }
   }
@@ -338,7 +342,9 @@ function handleHitsNew() {
     else if (player.parry.using) {
       if (collision(player.parry.hitbox.x, player.parry.hitbox.y, player.parry.hitbox.size,
           projectile.x, projectile.y, projectile.size)) {
-            enemy.projectiles.splice(i, 1);
+            // enemy.projectiles.splice(i, 1);
+            projectile.angle = 180 + projectile.angle;
+            continue;
           }
     }
   }
@@ -459,13 +465,11 @@ function animate(timestamp) {
   drawAttacks();
   handleEnemyTeleportAttack();
 
-  console.log(enemy.attack1.used);
-
   if (!player.immunityFrames.active) {
     handleHitsNew();
   }
   handleProjectiles();
-  if (player.hit) {
+  if (player.hit && !player.parry.using) {
     lostHealth += 30;
     healthbar.style.width = 900 - lostHealth + "px";
     player.hit = false;
@@ -480,4 +484,9 @@ function animate(timestamp) {
   requestAnimationFrame(animate);
 }
 
-animate();
+startButton.addEventListener("click", function() {
+  menu.style.display = "none";
+  game.style.display = "flex";
+  healthbarContainer.style.display = "flex";
+  animate();
+})

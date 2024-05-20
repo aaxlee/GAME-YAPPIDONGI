@@ -9,7 +9,7 @@
 }
 
 .healthbar-container {
-  display: flex;
+  display: none;
   justify-content: space-evenly;
   align-items: center;
 }
@@ -20,4 +20,17 @@
   height: 20px;
   margin-top: 5px;
   border: 2px solid black;
+}
+
+.menu-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+#start-button {
+  padding: 10px 20px;
+  font-size: 20px;
+  cursor: pointer;
 }
