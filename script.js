@@ -216,31 +216,16 @@ function handleDash() {
 
 function handleParry() {
   if (player.parry.using) {
-    if (player.parry.iterations <= 10) {
-      // check player's direction to determine parry hitbox coordinates
-      if (player.direction.right) {
-        player.parry.hitbox.x = player.x + player.parry.hitbox.size;
-        player.parry.hitbox.y = player.y - (player.height / 2);
-      } else if (player.direction.left) {
-        player.parry.hitbox.x = player.x - player.width - player.parry.hitbox.size;
-        player.parry.hitbox.y = player.y - (player.height / 2);
-      } else if (player.direction.up) {
-        player.parry.hitbox.x = player.x - (player.width / 2);
-        player.parry.hitbox.y = player.y - player.height - player.parry.hitbox.size;
-      } else if (player.direction.down) {
-        player.parry.hitbox.x = player.x - (player.width / 2);
-        player.parry.hitbox.y = player.y + player.parry.hitbox.size;
-      }
 
-      player.parry.iterations++;
-      
-      ctx.beginPath();
-      ctx.fillRect(player.parry.hitbox.x, player.parry.hitbox.y, player.parry.hitbox.size, player.parry.hitbox.size);
-      ctx.stroke();
-    } else {
-      player.parry.using = false;
-      player.parry.iterations = 0;
-    }
+    let playerCenterX = player.x + player.width / 2;
+    let playerCenterY = player.y + player.height / 2;
+
+    player.parry.hitbox.x = playerCenterX - player.parry.hitbox.size / 2;
+    player.parry.hitbox.y = playerCenterY - player.parry.hitbox.size / 2;
+
+    ctx.beginPath();
+    ctx.fillRect(player.parry.hitbox.x, player.parry.hitbox.y, player.parry.hitbox.size, player.parry.hitbox.size);
+    ctx.stroke();
   }
 }
 
@@ -350,6 +335,12 @@ function handleHitsNew() {
       player.hit = true;
       enemy.projectiles.splice(i, 1);
     }
+    else if (player.parry.using) {
+      if (collision(player.parry.hitbox.x, player.parry.hitbox.y, player.parry.hitbox.size,
+          projectile.x, projectile.y, projectile.size)) {
+            enemy.projectiles.splice(i, 1);
+          }
+    }
   }
   // hit by enemy
   if (collision(enemy.x, enemy.y, enemy.size, player.x, player.y, player.width)) {
@@ -443,7 +434,7 @@ window.addEventListener("keydown", function(e) {
 });
 
 let lastTimestamp = 0;
-const FPS = 60;
+const FPS = 30;
 const timestep = 1000 / FPS;
 
 function animate(timestamp) {
@@ -454,15 +445,6 @@ function animate(timestamp) {
   lastTimestamp = timestep;
 
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
-
-  // if (enemy.attackCooldown == 100) {
-  //   randomizeEnemyAttack();
-  //   console.log(enemy.projectile.used);
-  //   console.log(enemy.attack1.used);
-  //   console.log(enemy.teleportAttack.used);
-  //   enemy.attackCooldown = 0;
-  // }
-  // enemy.attackCooldown++;
 
   if (enemy.attack1.cooldown == 100) {
     createCircleAttack();
