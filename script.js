@@ -16,8 +16,10 @@ let enemyCooldown = 100; // 100 is default value (easy difficulty)
 const WIDTH = 900;
 const HEIGHT = 450;
 
-const size = 10;
+const size = 15;
 const movespeed = 2;
+
+
 
 class Player {
   constructor() {
@@ -237,9 +239,9 @@ function handleParry() {
     player.parry.hitbox.x = player.x - player.parry.hitbox.size / 4;
     player.parry.hitbox.y = player.y - player.parry.hitbox.size / 4;
 
-    ctx.beginPath();
-    ctx.fillRect(player.parry.hitbox.x, player.parry.hitbox.y, player.parry.hitbox.size, player.parry.hitbox.size);
-    ctx.stroke();
+    // wierd numbers to make place the image correctly don't ask
+    ctx.drawImage(shield, player.parry.hitbox.x - player.parry.hitbox.size / 2.25, player.parry.hitbox.y - player.parry.hitbox.size / 2.25, 
+    2*player.parry.hitbox.size, 2*player.parry.hitbox.size);
   }
 }
 
@@ -271,9 +273,10 @@ function drawAttacks() {
       projectile.x += Math.cos(projectile.angle) * projectile.speed;
       projectile.y += Math.sin(projectile.angle) * projectile.speed;
     }
-    ctx.beginPath();
-    ctx.fillRect(projectile.x, projectile.y, projectile.size, projectile.size);
-    ctx.stroke();
+    // ctx.beginPath();
+    // ctx.fillRect(projectile.x, projectile.y, projectile.size, projectile.size);
+    // ctx.stroke();
+    ctx.drawImage(projectileImage, projectile.x, projectile.y, 2*projectile.size, 2*projectile.size);
   })
 }
 
@@ -368,6 +371,11 @@ let player = new Player;
 let enemy = new Bot;
 enemy.x = generateCoordinate(WIDTH - enemy.size);
 enemy.y = generateCoordinate(HEIGHT - enemy.size);
+
+let shield = new Image();
+shield.src = './sprites/shield.png';
+let projectileImage = new Image();
+projectileImage.src = './sprites/projectile.png';
 
 window.addEventListener("keyup", function(e) {
   switch (e.key) {
@@ -464,7 +472,7 @@ function animate(timestamp) {
   }
   enemy.projectile.cooldown++;
 
-
+  drawObjects();
 
   handleMovement();
   handleBorder();
@@ -486,8 +494,6 @@ function animate(timestamp) {
   if (!enemy.teleportAttack.used) {
     enemy.follow(player, enemy.speed);
   }
-
-  drawObjects();
 
   requestAnimationFrame(animate);
 }
