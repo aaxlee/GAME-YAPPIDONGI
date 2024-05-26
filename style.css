@@ -14,6 +14,9 @@
 
 #canvas {
   border: 1px solid black;
+  background-image: url('sprites/background.jpg');
+  background-size: cover;
+  background-position: center;
 }
 
 .healthbar-container {

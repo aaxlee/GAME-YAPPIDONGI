@@ -23,7 +23,7 @@ const movespeed = 2;
 
 class Player {
   constructor() {
-    this.health = 100;
+    this.health = 900;
     this.hit = false;
     this.x = WIDTH / 2;
     this.y = HEIGHT / 2;
@@ -117,10 +117,8 @@ class Bot {
       return;
     }
   }
-  resetAttacks() {
-    this.projectile.used = false;
-    this.attack1.used = false;
-    this.teleportAttack.used = false;
+  clearProjectiles() {
+    this.projectiles = [];
   }
 }
 
@@ -497,12 +495,24 @@ function animate(timestamp) {
   handleProjectiles();
   if (player.hit && !player.parry.using) {
     lostHealth += 5;
+    player.health -= 5;
     healthbar.style.width = 900 - lostHealth + "px";
     player.hit = false;
   }
 
   if (!enemy.teleportAttack.used) {
     enemy.follow(player, enemy.speed);
+  }
+
+  if (player.health <= 0) {
+    cancelAnimationFrame(animate);
+    alert("Game Over! Your health reached 0.");
+    canvasContainer.style.display = "none";
+    menu.style.display = "flex";
+    healthbarContainer.style.display = "none";
+    lostHealth = 0;
+    player.health = 900;
+    return;
   }
 
   requestAnimationFrame(animate);
@@ -520,6 +530,11 @@ startButton.addEventListener("click", function() {
   menu.style.display = "none";
   canvasContainer.style.display = "block";
   healthbarContainer.style.display = "flex";
+
+  enemy.clearProjectiles();
+  enemy.x = generateCoordinate(WIDTH - enemy.size);
+  enemy.y = generateCoordinate(HEIGHT - enemy.size);
+  enemy.attackCooldown = 0;
 
   switch (difficulty.value) {
     case "Easy":
