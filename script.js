@@ -9,6 +9,7 @@ const WIDTH = 900;
 const HEIGHT = 450;
 const size = 15;
 const movespeed = 2;
+const damage = 10; // amount of dmg a projectile does
 let lostHealth = 0;
 let healthbarContainer = document.querySelector(".healthbar-container");
 let enemyCooldown = 100;
@@ -74,12 +75,12 @@ class Bot {
       left: false,
       right: false
     };
-    this.projectile = {
+    this.burst = {
       cooldown: 0,
       iterations: 0,
       active: false
     };
-    this.attack1 = {
+    this.circleAttack = {
       cooldown: 0
     };
     this.teleportAttack = {
@@ -306,7 +307,6 @@ function handleHitsNew() {
       if (collision(player.parry.hitbox.x, player.parry.hitbox.y, player.parry.hitbox.size,
         projectile.x, projectile.y, projectile.size)) {
           // enemy.projectiles.splice(i, 1);
-          console.log("deflect");
           projectile.angle += 180;
         }
     } else if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
@@ -415,31 +415,32 @@ function animate(timestamp) {
 
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-  if (enemy.attack1.cooldown == enemyCooldown) {
+  if (enemy.circleAttack.cooldown == enemyCooldown) {
     let num = Math.floor(Math.random() * 4);
     if (num == 3) {
       enemy.teleportAttack.used = true;
     }
     createCircleAttack();
-    enemy.attack1.cooldown = 0;
+    enemy.circleAttack.cooldown = 0;
   }
-  enemy.attack1.cooldown++;
+  enemy.circleAttack.cooldown++;
 
-  if (enemy.projectile.active) {
-    if (enemy.projectile.iterations <= 60) {
+  if (enemy.burst.active) {
+    // create one projectile for the burst each frame until there are "enemyCooldown" amount of burst projectiles
+    if (enemy.burst.iterations <= enemyCooldown) {
       createSingleAttack();
-      enemy.projectile.iterations++;
+      enemy.burst.iterations++;
     } else {
-      enemy.projectile.iterations = 0;
-      enemy.projectile.active = false;
+      enemy.burst.iterations = 0;
+      enemy.burst.active = false;
     }
   }
 
-  if (enemy.projectile.cooldown == 2 * enemyCooldown) {
-    enemy.projectile.active = true;
-    enemy.projectile.cooldown = 0;
+  if (enemy.burst.cooldown == 2 * enemyCooldown) {
+    enemy.burst.active = true;
+    enemy.burst.cooldown = 0;
   }
-  enemy.projectile.cooldown++;
+  enemy.burst.cooldown++;
 
   drawObjects();
 
@@ -455,8 +456,8 @@ function animate(timestamp) {
   }
   handleProjectiles();
   if (player.hit && !player.parry.using) {
-    lostHealth += 5;
-    player.health -= 5;
+    lostHealth += damage;
+    player.health -= damage;
     healthbar.style.width = 900 - lostHealth + "px";
     player.hit = false;
   }
@@ -471,8 +472,6 @@ function animate(timestamp) {
     canvasContainer.style.display = "none";
     menu.style.display = "flex";
     healthbarContainer.style.display = "none";
-    lostHealth = 0;
-    player.health = 900;
     return;
   }
 
@@ -496,7 +495,11 @@ startButton.addEventListener("click", function () {
   enemy.clearProjectiles();
   enemy.x = generateCoordinate(WIDTH - enemy.size);
   enemy.y = generateCoordinate(HEIGHT - enemy.size);
-  enemy.attackCooldown = 0;
+  enemy.circleAttack.cooldown = 0;
+  enemy.burst.cooldown = 0;
+  lostHealth = 0;
+  player.health = 900;
+  healthbar.style.width = 900 + "px";
 
   switch (difficulty.value) {
     case "Easy":
