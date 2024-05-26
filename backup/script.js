@@ -1,18 +1,29 @@
-let canvas = document.getElementById("canvas");
-let ctx = canvas.getContext("2d");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+const startButton = document.getElementById("startButton");
+let menu = document.getElementById("start-menu");
+const canvasContainer = document.getElementById("canvas-container");
 
 let lostHealth = 0;
-let healthbar = document.getElementById("healthbar");
+let healthbarContainer = document.querySelector(".healthbar-container");
+const healthbar = document.getElementById("healthbar");
+
+let difficulty = document.getElementById("difficulty");
+
+let enemyCooldown = 100; // 100 is default value (easy difficulty)
 
 const WIDTH = 900;
 const HEIGHT = 450;
 
-const size = 10;
-const movespeed = 3;
+const size = 15;
+const movespeed = 2;
+
+
 
 class Player {
   constructor() {
-    this.health = 100;
+    this.health = 900;
     this.hit = false;
     this.x = WIDTH / 2;
     this.y = HEIGHT / 2;
@@ -35,7 +46,6 @@ class Player {
     };
     this.parry = {
       using: false,
-      success: false,
       cooldown: 5,
       iterations: 0,
       hitbox : {
@@ -73,16 +83,12 @@ class Bot {
       right: false
     };
     this.projectile = {
-      used: false,
-      array: [],
-      index: 0,
-      iterations: 0
+      cooldown: 0,
+      iterations: 0,
+      active: false
     };
     this.attack1 = {
-      used: false,
-      array: [],
-      index: 0,
-      iterations: 0
+      cooldown: 0
     };
     this.teleportAttack = {
       used: false,
@@ -101,7 +107,7 @@ class Bot {
   }
   follow(player, speed) {
     if (!collision(this.x, this.y, this,size, player.x, player.y, player.width)) {
-      let angle = Math.atan2(player.y - this.y, player.x - this.x);
+      let angle = getAngle(this.x, this.y, player.x, player.y)
       let x = Math.cos(angle);
       let y = Math.sin(angle);
       this.x += x * speed;
@@ -110,18 +116,16 @@ class Bot {
       return;
     }
   }
-  resetAttacks() {
-    this.projectile.used = false;
-    this.attack1.used = false;
-    this.teleportAttack.used = false;
+  clearProjectiles() {
+    this.projectiles = [];
   }
 }
 
 class Projectile {
-  constructor(x, y, direction, size, speed, angle) {
+  constructor(x, y, type, size, speed, angle) {
     this.x = x;
     this.y = y;
-    this.direction = direction
+    this.type = type
     this.size = size;
     this.speed = speed;
     this.angle = angle;
@@ -132,13 +136,19 @@ async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function getAngle(x1, y1, x2, y2) {
+  return Math.atan2(y2 - y1, x2 - x1);
+}
+
 function collision(x1, y1, size1, x2, y2, size2) {
-  if (x1 <= x2 + size2 && x1 + size1 >= x2 &&
-    y1 <= y2 + size2 && y1 + size1 >= y2) {
+  if (x1 + size1 >= x2 &&    // 1 right edge past 2 left
+  x1 <= x2 + size2 &&    // 1 left edge past 2 right
+  y1 + size1 >= y2 &&    // 1 top edge past 2 bottom
+  y1 <= y2 + size2) {    // 1 bottom edge past 2 top
     return true;
-  } else {
-    return false;
-  }
+} else {
+  return false;
+}
 }
 
 function findDistance(player, enemy) {
@@ -198,7 +208,7 @@ function handleBorder() {
 function handleDash() {
   if (player.dash.using) {
     player.immunityFrames.active = true;
-    if (player.dash.iterations < 17) {
+    if (player.dash.iterations < 10) {
       if (player.direction.right) {
         player.x += player.dash.distance;
       }
@@ -222,151 +232,52 @@ function handleDash() {
 
 function handleParry() {
   if (player.parry.using) {
-    if (player.parry.iterations <= 10) {
-      // check player's direction to determine parry hitbox coordinates
-      if (player.direction.right) {
-        player.parry.hitbox.x = player.x + player.parry.hitbox.size;
-        player.parry.hitbox.y = player.y - (player.height / 2);
-      } else if (player.direction.left) {
-        player.parry.hitbox.x = player.x - player.width - player.parry.hitbox.size;
-        player.parry.hitbox.y = player.y - (player.height / 2);
-      } else if (player.direction.up) {
-        player.parry.hitbox.x = player.x - (player.width / 2);
-        player.parry.hitbox.y = player.y - player.height - player.parry.hitbox.size;
-      } else if (player.direction.down) {
-        player.parry.hitbox.x = player.x - (player.width / 2);
-        player.parry.hitbox.y = player.y + player.parry.hitbox.size;
-      }
 
-      player.parry.iterations++;
-      
-      ctx.beginPath();
-      ctx.fillRect(player.parry.hitbox.x, player.parry.hitbox.y, player.parry.hitbox.size, player.parry.hitbox.size);
-      ctx.stroke();
-    } else {
-      player.parry.using = false;
-      player.parry.iterations = 0;
-    }
+    player.parry.hitbox.x = player.x - player.parry.hitbox.size / 4;
+    player.parry.hitbox.y = player.y - player.parry.hitbox.size / 4;
+
+    // weird numbers to make place the image correctly don't ask
+    ctx.drawImage(shield, player.parry.hitbox.x - player.parry.hitbox.size / 2.25, player.parry.hitbox.y - player.parry.hitbox.size / 2.25, 
+    2*player.parry.hitbox.size, 2*player.parry.hitbox.size);
   }
 }
 
 function createSingleAttack() {
+  
+  let projectile = new Projectile(0, 0, 0, 10, 8, -1)
 
-  enemy.projectile.used = true;
+  projectile.x = enemy.x;
+  projectile.y = enemy.y + enemy.size / 2;
+  projectile.angle = getAngle(projectile.x, projectile.y, player.x, player.y)
 
-  let projectile = new Projectile(0, 0, 1, 5, 12, -1)
-  enemy.projectile.array.push(projectile);
   enemy.projectiles.push(projectile);
-
-  let currentProjectileAttack = enemy.projectile.array[enemy.projectile.index];
-  currentProjectileAttack.x = enemy.x;
-  currentProjectileAttack.y = enemy.y + (enemy.size / 2);
-  if (player.x < currentProjectileAttack.x) {
-    currentProjectileAttack.direction = -1;
-  } else if (player.x > currentProjectileAttack.x) {
-    currentProjectileAttack.direction = 1;
-  }
-  enemy.projectile.index++;
-}
-
-function handleEnemySingleAttack() {
-  if (enemy.projectile.used) {
-    for (let index = 0; index < enemy.projectile.array.length; index++) {
-      let projectile = enemy.projectile.array[index];
-      // if projectile is outside border
-      if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT ||
-        collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)
-      ) {
-        enemy.projectile.array.splice(index, 1);
-        enemy.projectile.index -= 1;
-      } else { // else draw it
-        projectile.x += projectile.speed * projectile.direction;
-        ctx.beginPath();
-        ctx.fillRect(projectile.x, projectile.y, 5, 5);
-        ctx.stroke();
-      }
-    }
-  }
-}
-
-function handleSingleAttackNew() {
-  if (enemy.projectile.used) {
-    enemy.projectile.array.forEach(projectile => {
-      projectile.x += projectile.speed * projectile.direction;
-      ctx.beginPath();
-      ctx.fillRect(projectile.x, projectile.y, 5, 5);
-      ctx.stroke();
-    })
-  }
 }
 
 function createCircleAttack() {
-  enemy.attack1.used = true;
-
-  let circleAttack = [];
   for (let degrees = 0; degrees <= 360; degrees += 15) {
-    let projectile = new Projectile(0, 0, 2, 5, 3, degrees);
-    circleAttack.push(projectile);
+    let projectile = new Projectile(enemy.x, enemy.y, 1, 10, 3, degrees);
     enemy.projectiles.push(projectile);
   }
-  enemy.attack1.array.push(circleAttack);
+}
 
-  let currentCircleAttack = enemy.attack1.array[enemy.attack1.index]
-
-  currentCircleAttack.forEach(projectile => {
-    projectile.x = enemy.x;
-    projectile.y = enemy.y;
+function drawAttacks() {
+  enemy.projectiles.forEach(projectile => {
+    if (projectile.type == 1) { // type 1 = circle attack thing
+      // mess around with trig functions :)))
+      projectile.x += Math.cos(projectile.angle) * projectile.speed;
+      projectile.y += Math.sin(projectile.angle) * projectile.speed;
+    } else {
+      projectile.x += Math.cos(projectile.angle) * projectile.speed;
+      projectile.y += Math.sin(projectile.angle) * projectile.speed;
+    }
+    ctx.drawImage(projectileImage, projectile.x, projectile.y, 2*projectile.size, 2*projectile.size);
   })
-  enemy.attack1.index++;
 }
-
-function handleEnemyCircleAttack() {
-  if (enemy.attack1.used) {
-    enemy.attack1.array.forEach(attack => {
-      let projectilesToRemove = [];
-      attack.forEach((projectile, index) => {
-        // Remove projectile if out of bounds or hit player
-        if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT ||
-            collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)
-        ) {
-          projectilesToRemove.push(index);
-        } else { // else move and draw projectile
-          projectile.x += Math.cos(projectile.angle) * projectile.speed;
-          projectile.y += Math.sin(projectile.angle) * projectile.speed;
-          ctx.beginPath();
-          ctx.fillRect(projectile.x, projectile.y, projectile.size, projectile.size);
-          ctx.stroke();
-        }
-      });
-      // Remove projectiles marked for removal
-      projectilesToRemove.forEach(index => {
-        attack.splice(index, 1);
-      });
-    });
-  }
-}
-
-function handleEnemyCircleAttackNew() {
-  if (enemy.attack1.used) {
-    enemy.attack1.array.forEach(attack => {
-      attack.forEach(projectile => {
-        projectile.x += Math.cos(projectile.angle) * projectile.speed;
-        projectile.y += Math.sin(projectile.angle) * projectile.speed;
-        ctx.beginPath();
-        ctx.fillRect(projectile.x, projectile.y, projectile.size, projectile.size);
-        ctx.stroke();
-      })
-    })
-  }
-  }
 
 function handleProjectiles() {
   for (let i = enemy.projectiles.length - 1; i >= 0; i--) {
-    const projectile = enemy.projectiles[i];
-    if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT
-      || collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)
-    ) {
-      console.log("delete");
+    let projectile = enemy.projectiles[i];
+    if (projectile.x < 0 || projectile.x > WIDTH || projectile.y < 0 || projectile.y > HEIGHT) {
       enemy.projectiles.splice(i, 1);
     }
   }
@@ -390,7 +301,7 @@ function handleEnemyTeleportAttack() {
         enemy.teleportAttack.used = false;
         enemy.teleportAttack.iterations = 0;
       } else {  // else continue as normal
-        enemy.follow(target, enemy.speed * 10);
+        enemy.follow(target, enemy.speed * 5);
         enemy.teleportAttack.iterations++
       }
     } else if (enemy.teleportAttack.iterations >= 30) {
@@ -423,28 +334,24 @@ function handleHits() {
 }
 
 function handleHitsNew() {
-  enemy.projectiles.forEach(projectile => {
-    if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
+  // hit by projectile
+  for (let i = 0; i < enemy.projectiles.length; i++) {
+    let projectile = enemy.projectiles[i];
+    if (player.parry.using) {
+      if (collision(player.parry.hitbox.x, player.parry.hitbox.y, player.parry.hitbox.size,
+        projectile.x, projectile.y, projectile.size)) {
+          // enemy.projectiles.splice(i, 1);
+          console.log("deflect");
+          projectile.angle += 180;
+        }
+    } else if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
       player.hit = true;
+      enemy.projectiles.splice(i, 1);
     }
-  })
-}
-
-function randomizeEnemyAttack() {
-  enemy.resetAttacks();
-  let num = Math.floor(Math.random() * 3)
-  switch(num) {
-    case 0:
-      enemy.projectile.used = true;
-      createSingleAttack();
-      break;
-    case 1:
-      enemy.attack1.used = true;
-      createCircleAttack();
-      break;
-    case 2:
-      enemy.teleportAttack.used = true;
-      break;
+  }
+  // hit by enemy
+  if (collision(enemy.x, enemy.y, enemy.size, player.x, player.y, player.width)) {
+    player.hit = true;
   }
 }
 
@@ -453,14 +360,25 @@ function drawObjects() {
   enemy.draw();
 }
 
-// creating player and enemy attacks
+
 let player = new Player;
 let enemy = new Bot;
 enemy.x = generateCoordinate(WIDTH - enemy.size);
 enemy.y = generateCoordinate(HEIGHT - enemy.size);
 
+let shield = new Image();
+shield.src = './sprites/shield.png';
+let projectileImage = document.createElement("img");
+// too lazy to make the gif animated
+projectileImage.src = './sprites/fireball.gif';
+
 window.addEventListener("keyup", function(e) {
-  switch (e.key) {
+  let key = e.key;
+  // turn key to lowercase so it works if user has capslock
+  if (key.length === 1) { // only if the length is 1, otherwise arrowkeys wont get registered
+    key = key.toLowerCase();
+  }
+  switch (key) {
     case "ArrowRight":
       player.direction.right = false;
       break;
@@ -473,11 +391,19 @@ window.addEventListener("keyup", function(e) {
     case "ArrowDown":
       player.direction.down = false;
       break;
+    case "f":
+      player.parry.using = false;
+      break;
   }
 })
 
 window.addEventListener("keydown", function(e) {
-  switch (e.key) {
+  let key = e.key;
+    // turn key to lowercase so it works if user has capslock
+  if (key.length === 1) { // only if the length is 1, otherwise arrowkeys wont get registered
+    key = key.toLowerCase();
+  }
+  switch (key) {
     case "ArrowRight":
       player.resetDirections();
       player.direction.right = true;
@@ -513,7 +439,7 @@ window.addEventListener("keydown", function(e) {
 });
 
 let lastTimestamp = 0;
-const FPS = 60;
+const FPS = 30;
 const timestep = 1000 / FPS;
 
 function animate(timestamp) {
@@ -525,33 +451,48 @@ function animate(timestamp) {
 
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-  // if (enemy.attackCooldown == 75) {
-  //   randomizeEnemyAttack();
-  //   console.log(enemy.projectile.used);
-  //   console.log(enemy.attack1.used);
-  //   console.log(enemy.teleportAttack.used);
-  //   enemy.attackCooldown = 0;
-  // }
-  // enemy.attackCooldown++;
+  if (enemy.attack1.cooldown == enemyCooldown) {
+    let num = Math.floor(Math.random() * 4);
+    if (num == 3) {
+      enemy.teleportAttack.used = true;
+    }
+    createCircleAttack();
+    enemy.attack1.cooldown = 0;
+  }
+  enemy.attack1.cooldown++;
+
+  if (enemy.projectile.active) {
+    if (enemy.projectile.iterations <= 60) {
+      createSingleAttack();
+      enemy.projectile.iterations++;
+    } else {
+      enemy.projectile.iterations = 0;
+      enemy.projectile.active = false;
+    }
+  }
+
+  if (enemy.projectile.cooldown == 2 * enemyCooldown) {
+    enemy.projectile.active = true;
+    enemy.projectile.cooldown = 0;
+  }
+  enemy.projectile.cooldown++;
+
+  drawObjects();
 
   handleMovement();
   handleBorder();
   handleDash();
   handleParry();
-  // handleEnemySingleAttack();
-  handleSingleAttackNew();
-  // handleEnemyCircleAttack();
-  handleEnemyCircleAttackNew();
-  handleProjectiles();
+  drawAttacks();
   handleEnemyTeleportAttack();
 
-
   if (!player.immunityFrames.active) {
-    // handleHits();
     handleHitsNew();
   }
-  if (player.hit) {
-    lostHealth += 30;
+  handleProjectiles();
+  if (player.hit && !player.parry.using) {
+    lostHealth += 5;
+    player.health -= 5;
     healthbar.style.width = 900 - lostHealth + "px";
     player.hit = false;
   }
@@ -560,9 +501,49 @@ function animate(timestamp) {
     enemy.follow(player, enemy.speed);
   }
 
-  drawObjects();
+  if (player.health <= 0) {
+    cancelAnimationFrame(animate);
+    alert("Game Over! Your health reached 0.");
+    canvasContainer.style.display = "none";
+    menu.style.display = "flex";
+    healthbarContainer.style.display = "none";
+    lostHealth = 0;
+    player.health = 900;
+    return;
+  }
 
   requestAnimationFrame(animate);
 }
 
-animate();
+document.getElementById("settingsButton").addEventListener("click", function() {
+  document.querySelector(".settings-menu").style.display = "block";
+});
+
+document.getElementById("closeSettings").addEventListener("click", function() {
+  document.querySelector(".settings-menu").style.display = "none";
+});
+
+startButton.addEventListener("click", function() {
+  menu.style.display = "none";
+  canvasContainer.style.display = "block";
+  healthbarContainer.style.display = "flex";
+
+  enemy.clearProjectiles();
+  enemy.x = generateCoordinate(WIDTH - enemy.size);
+  enemy.y = generateCoordinate(HEIGHT - enemy.size);
+  enemy.attackCooldown = 0;
+
+  switch (difficulty.value) {
+    case "Easy":
+      enemyCooldown = 100;
+      break;
+    case "Medium":
+      enemyCooldown = 70
+      break;
+    case "Hard":
+      enemyCooldown = 45;
+      break;
+  }
+
+  animate();
+})

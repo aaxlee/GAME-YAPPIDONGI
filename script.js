@@ -1,25 +1,17 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-
 const startButton = document.getElementById("startButton");
-let menu = document.getElementById("start-menu");
+const menu = document.getElementById("start-menu");
 const canvasContainer = document.getElementById("canvas-container");
-
-let lostHealth = 0;
-let healthbarContainer = document.querySelector(".healthbar-container");
 const healthbar = document.getElementById("healthbar");
-
-let difficulty = document.getElementById("difficulty");
-
-let enemyCooldown = 100; // 100 is default value (easy difficulty)
-
+const difficulty = document.getElementById("difficulty");
 const WIDTH = 900;
 const HEIGHT = 450;
-
 const size = 15;
 const movespeed = 2;
-
-
+let lostHealth = 0;
+let healthbarContainer = document.querySelector(".healthbar-container");
+let enemyCooldown = 100;
 
 class Player {
   constructor() {
@@ -29,32 +21,10 @@ class Player {
     this.y = HEIGHT / 2;
     this.width = size;
     this.height = size;
-    this.direction = {
-      up: false,
-      down: false,
-      left: false,
-      right: false
-    };
-    this.immunityFrames = {
-      active: false
-    }
-    this.dash = {
-      using: false,
-      distance: 5,
-      iterations: 0,
-      cooldown: 2
-    };
-    this.parry = {
-      using: false,
-      success: false,
-      cooldown: 5,
-      iterations: 0,
-      hitbox : {
-        size: size * 2,
-        x: 0,
-        y: 0
-      }
-    };
+    this.direction = { up: false, down: false, left: false, right: false };
+    this.immunityFrames = { active: false };
+    this.dash = { using: false, distance: 5, iterations: 0, cooldown: 2 };
+    this.parry = { using: false, hitbox: { size: size * 2, x: 0, y: 0 } };
   }
   draw() {
     ctx.beginPath();
@@ -75,31 +45,9 @@ class Bot {
     this.y = 0;
     this.speed = 1;
     this.size = size;
-    this.attackCooldown = 0;
     this.projectiles = [];
-    this.direction = {
-      up: false,
-      down: false,
-      left: false,
-      right: false
-    };
-    this.projectile = {
-      cooldown: 0,
-      iterations: 0,
-      active: false
-    };
-    this.attack1 = {
-      cooldown: 0
-    };
-    this.teleportAttack = {
-      used: false,
-      target : {
-        x: 0,
-        y: 0
-      },
-      cooldown: 12,
-      iterations: 0
-    };
+    this.direction = { up: false, down: false, left: false, right: false };
+    this.teleportAttack = { used: false, target: { x: 0, y: 0 }, cooldown: 12, iterations: 0 };
   }
   draw() {
     ctx.beginPath();
@@ -107,15 +55,11 @@ class Bot {
     ctx.stroke();
   }
   follow(player, speed) {
-    if (!collision(this.x, this.y, this,size, player.x, player.y, player.width)) {
-      let angle = getAngle(this.x, this.y, player.x, player.y)
-      let x = Math.cos(angle);
-      let y = Math.sin(angle);
-      this.x += x * speed;
-      this.y += y * speed;
-    } else if (collision(this.x, this.y, this,size, player.x, player.y, player.width)) {
-      return;
-    }
+    let angle = getAngle(this.x, this.y, player.x, player.y);
+    let x = Math.cos(angle);
+    let y = Math.sin(angle);
+    this.x += x * speed;
+    this.y += y * speed;
   }
   clearProjectiles() {
     this.projectiles = [];
@@ -126,38 +70,15 @@ class Projectile {
   constructor(x, y, type, size, speed, angle) {
     this.x = x;
     this.y = y;
-    this.type = type
+    this.type = type;
     this.size = size;
     this.speed = speed;
     this.angle = angle;
   }
 }
 
-async function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 function getAngle(x1, y1, x2, y2) {
   return Math.atan2(y2 - y1, x2 - x1);
-}
-
-function collision(x1, y1, size1, x2, y2, size2) {
-  if (x1 + size1 >= x2 &&    // 1 right edge past 2 left
-  x1 <= x2 + size2 &&    // 1 left edge past 2 right
-  y1 + size1 >= y2 &&    // 1 top edge past 2 bottom
-  y1 <= y2 + size2) {    // 1 bottom edge past 2 top
-    return true;
-} else {
-  return false;
-}
-}
-
-function findDistance(player, enemy) {
-  return Math.abs(Math.sqrt((player.x - enemy.x)**2 + (player.y - enemy.y)**2));
-}
-
-function generateCoordinate(max) {
-  return Math.floor(Math.random() * max);
 }
 
 function handleMovement() {
@@ -237,14 +158,13 @@ function handleParry() {
     player.parry.hitbox.x = player.x - player.parry.hitbox.size / 4;
     player.parry.hitbox.y = player.y - player.parry.hitbox.size / 4;
 
-    // wierd numbers to make place the image correctly don't ask
+    // weird numbers to make place the image correctly don't ask
     ctx.drawImage(shield, player.parry.hitbox.x - player.parry.hitbox.size / 2.25, player.parry.hitbox.y - player.parry.hitbox.size / 2.25, 
     2*player.parry.hitbox.size, 2*player.parry.hitbox.size);
   }
 }
 
 function createSingleAttack() {
-  
   let projectile = new Projectile(0, 0, 0, 10, 8, -1)
 
   projectile.x = enemy.x;
@@ -271,9 +191,6 @@ function drawAttacks() {
       projectile.x += Math.cos(projectile.angle) * projectile.speed;
       projectile.y += Math.sin(projectile.angle) * projectile.speed;
     }
-    // ctx.beginPath();
-    // ctx.fillRect(projectile.x, projectile.y, projectile.size, projectile.size);
-    // ctx.stroke();
     ctx.drawImage(projectileImage, projectile.x, projectile.y, 2*projectile.size, 2*projectile.size);
   })
 }
@@ -315,28 +232,6 @@ function handleEnemyTeleportAttack() {
   }
 }
 
-function handleHits() {
-  // single attack
-  for (let index = 0; index < enemy.projectile.array.length; index++) {
-    let projectile = enemy.projectile.array[index];
-    if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
-      player.hit = true;
-    }
-  }
-  // circle attack
-  enemy.attack1.array.forEach(attack => {
-    attack.forEach(projectile => {
-      if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
-        player.hit = true;
-      }
-    })
-  })
-  // teleport attack
-  if (collision(player.x, player.y, player.width, enemy.x, enemy.y, enemy.size)) {
-    player.hit = true;
-  }
-}
-
 function handleHitsNew() {
   // hit by projectile
   for (let i = 0; i < enemy.projectiles.length; i++) {
@@ -364,18 +259,12 @@ function drawObjects() {
   enemy.draw();
 }
 
-
-let player = new Player;
-let enemy = new Bot;
+let player = new Player();
+let enemy = new Bot();
 enemy.x = generateCoordinate(WIDTH - enemy.size);
 enemy.y = generateCoordinate(HEIGHT - enemy.size);
 
-let shield = new Image();
-shield.src = './sprites/shield.png';
-let projectileImage = document.createElement("img");
-projectileImage.src = './sprites/fireball.gif';
-
-window.addEventListener("keyup", function(e) {
+window.addEventListener("keyup", function (e) {
   let key = e.key;
   // turn key to lowercase so it works if user has capslock
   if (key.length === 1) { // only if the length is 1, otherwise arrowkeys wont get registered
@@ -398,9 +287,9 @@ window.addEventListener("keyup", function(e) {
       player.parry.using = false;
       break;
   }
-})
+});
 
-window.addEventListener("keydown", function(e) {
+window.addEventListener("keydown", function (e) {
   let key = e.key;
     // turn key to lowercase so it works if user has capslock
   if (key.length === 1) { // only if the length is 1, otherwise arrowkeys wont get registered
@@ -518,19 +407,20 @@ function animate(timestamp) {
   requestAnimationFrame(animate);
 }
 
-document.getElementById("settingsButton").addEventListener("click", function() {
+document.getElementById("settingsButton").addEventListener("click", function () {
   document.querySelector(".settings-menu").style.display = "block";
 });
 
-document.getElementById("closeSettings").addEventListener("click", function() {
+document.getElementById("closeSettings").addEventListener("click", function () {
   document.querySelector(".settings-menu").style.display = "none";
 });
 
-startButton.addEventListener("click", function() {
+startButton.addEventListener("click", function () {
   menu.style.display = "none";
   canvasContainer.style.display = "block";
   healthbarContainer.style.display = "flex";
 
+  // reset stuff for when you play again
   enemy.clearProjectiles();
   enemy.x = generateCoordinate(WIDTH - enemy.size);
   enemy.y = generateCoordinate(HEIGHT - enemy.size);
@@ -549,4 +439,4 @@ startButton.addEventListener("click", function() {
   }
 
   animate();
-})
+});

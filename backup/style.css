@@ -1,24 +1,35 @@
-.canvas-container {
+#start-menu {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+}
+
+#canvas-container {
   display: flex;
   justify-content: center;
   align-items: space-evenly;
+  display: none;
 }
 
 #canvas {
   border: 1px solid black;
+  background-image: url('sprites/background.jpg');
+  background-size: cover;
+  background-position: center;
 }
 
 .healthbar-container {
-  display: none;
+  display: flex;
   justify-content: space-evenly;
   align-items: center;
+  display: none; /* Initially hidden */
 }
 
 #healthbar {
   background-color: red;
   width: 900px;
   height: 20px;
-  margin-top: 5px;
   border: 2px solid black;
 }
 
@@ -26,11 +37,35 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  height: 90vh;
 }
 
-#start-button {
-  padding: 10px 20px;
-  font-size: 20px;
+#startButton {
   cursor: pointer;
+}
+
+.settings-menu {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.settings-menu h2 {
+  margin-bottom: 10px;
+}
+
+.settings-menu label {
+  display: inline-block;
+  margin-bottom: 5px;
+}
+
+.settings-menu button {
+  margin-top: 10px;
 }
