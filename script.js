@@ -14,6 +14,17 @@ let lostHealth = 0;
 let healthbarContainer = document.querySelector(".healthbar-container");
 let enemyCooldown = 100;
 
+const spriteSheet = new Image();
+spriteSheet.src = './sprites/Character_sheet.png';
+
+
+const FRAME_WIDTH = 1000 / 10;
+const FRAME_HEIGHT = 1000 / 11;
+const NUM_FRAMES = 4;
+let currentFrame = 0;
+let frameCount = 0;
+const FRAME_SPEED = 5;
+
 class Player {
   constructor() {
     this.health = 900;
@@ -49,9 +60,8 @@ class Player {
     };
   }
   draw() {
-    ctx.beginPath();
+    ctx.fillStyle = "blue";
     ctx.fillRect(this.x, this.y, this.width, this.height);
-    ctx.stroke();
   }
   resetDirections() {
     this.direction.right = false;
@@ -94,9 +104,16 @@ class Bot {
     };
   }
   draw() {
-    ctx.beginPath();
-    ctx.fillRect(this.x, this.y, this.size, this.size);
-    ctx.stroke();
+    ctx.drawImage(
+      spriteSheet,
+      currentFrame * FRAME_WIDTH, 0, FRAME_WIDTH, FRAME_HEIGHT,
+      this.x - FRAME_WIDTH/2.5, this.y - FRAME_WIDTH/2.5, FRAME_WIDTH, FRAME_HEIGHT
+    );
+    frameCount++;
+    if (frameCount >= FRAME_SPEED) {
+      frameCount = 0;
+      currentFrame = (currentFrame + 1) % NUM_FRAMES;
+    }
   }
   follow(player, speed) {
     if (!collision(this.x, this.y, this,size, player.x, player.y, player.width)) {
@@ -403,15 +420,15 @@ window.addEventListener("keydown", function (e) {
 });
 
 let lastTimestamp = 0;
-const FPS = 30;
-const timestep = 1000 / FPS;
+let maxFPS = 75;
+let timestep = 1000 / maxFPS
 
 function animate(timestamp) {
   if (timestamp - lastTimestamp < timestep) {
     requestAnimationFrame(animate);
     return;
   }
-  lastTimestamp = timestep;
+  lastTimestamp = timestamp;
 
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
@@ -457,7 +474,7 @@ function animate(timestamp) {
   handleProjectiles();
   if (player.hit && !player.parry.using) {
     lostHealth += damage;
-    player.health -= damage;
+    // player.health -= damage;
     healthbar.style.width = 900 - lostHealth + "px";
     player.hit = false;
   }
