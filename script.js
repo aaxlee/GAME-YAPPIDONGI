@@ -247,7 +247,7 @@ function handleParry() {
 
 function createSingleAttack() {
   
-  let projectile = new Projectile(0, 0, 0, 5, 8, -1)
+  let projectile = new Projectile(0, 0, 0, 10, 8, -1)
 
   projectile.x = enemy.x;
   projectile.y = enemy.y + enemy.size / 2;
@@ -258,7 +258,7 @@ function createSingleAttack() {
 
 function createCircleAttack() {
   for (let degrees = 0; degrees <= 360; degrees += 15) {
-    let projectile = new Projectile(enemy.x, enemy.y, 1, 5, 3, degrees);
+    let projectile = new Projectile(enemy.x, enemy.y, 1, 10, 3, degrees);
     enemy.projectiles.push(projectile);
   }
 }
@@ -366,7 +366,7 @@ function drawObjects() {
   enemy.draw();
 }
 
-// creating player and enemy attacks
+
 let player = new Player;
 let enemy = new Bot;
 enemy.x = generateCoordinate(WIDTH - enemy.size);
@@ -374,11 +374,16 @@ enemy.y = generateCoordinate(HEIGHT - enemy.size);
 
 let shield = new Image();
 shield.src = './sprites/shield.png';
-let projectileImage = new Image();
-projectileImage.src = './sprites/projectile.png';
+let projectileImage = document.createElement("img");
+projectileImage.src = './sprites/fireball.gif';
 
 window.addEventListener("keyup", function(e) {
-  switch (e.key) {
+  let key = e.key;
+  // turn key to lowercase so it works if user has capslock
+  if (key.length === 1) { // only if the length is 1, otherwise arrowkeys wont get registered
+    key = key.toLowerCase();
+  }
+  switch (key) {
     case "ArrowRight":
       player.direction.right = false;
       break;
@@ -398,7 +403,12 @@ window.addEventListener("keyup", function(e) {
 })
 
 window.addEventListener("keydown", function(e) {
-  switch (e.key) {
+  let key = e.key;
+    // turn key to lowercase so it works if user has capslock
+  if (key.length === 1) { // only if the length is 1, otherwise arrowkeys wont get registered
+    key = key.toLowerCase();
+  }
+  switch (key) {
     case "ArrowRight":
       player.resetDirections();
       player.direction.right = true;
