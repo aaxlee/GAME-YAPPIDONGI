@@ -21,10 +21,31 @@ class Player {
     this.y = HEIGHT / 2;
     this.width = size;
     this.height = size;
-    this.direction = { up: false, down: false, left: false, right: false };
-    this.immunityFrames = { active: false };
-    this.dash = { using: false, distance: 5, iterations: 0, cooldown: 2 };
-    this.parry = { using: false, hitbox: { size: size * 2, x: 0, y: 0 } };
+    this.direction = {
+      up: false,
+      down: false,
+      left: false,
+      right: false
+    };
+    this.immunityFrames = {
+      active: false
+    }
+    this.dash = {
+      using: false,
+      distance: 5,
+      iterations: 0,
+      cooldown: 2
+    };
+    this.parry = {
+      using: false,
+      cooldown: 5,
+      iterations: 0,
+      hitbox : {
+        size: size * 2,
+        x: 0,
+        y: 0
+      }
+    };
   }
   draw() {
     ctx.beginPath();
@@ -45,9 +66,31 @@ class Bot {
     this.y = 0;
     this.speed = 1;
     this.size = size;
+    this.attackCooldown = 0;
     this.projectiles = [];
-    this.direction = { up: false, down: false, left: false, right: false };
-    this.teleportAttack = { used: false, target: { x: 0, y: 0 }, cooldown: 12, iterations: 0 };
+    this.direction = {
+      up: false,
+      down: false,
+      left: false,
+      right: false
+    };
+    this.projectile = {
+      cooldown: 0,
+      iterations: 0,
+      active: false
+    };
+    this.attack1 = {
+      cooldown: 0
+    };
+    this.teleportAttack = {
+      used: false,
+      target : {
+        x: 0,
+        y: 0
+      },
+      cooldown: 12,
+      iterations: 0
+    };
   }
   draw() {
     ctx.beginPath();
@@ -55,11 +98,15 @@ class Bot {
     ctx.stroke();
   }
   follow(player, speed) {
-    let angle = getAngle(this.x, this.y, player.x, player.y);
-    let x = Math.cos(angle);
-    let y = Math.sin(angle);
-    this.x += x * speed;
-    this.y += y * speed;
+    if (!collision(this.x, this.y, this,size, player.x, player.y, player.width)) {
+      let angle = getAngle(this.x, this.y, player.x, player.y)
+      let x = Math.cos(angle);
+      let y = Math.sin(angle);
+      this.x += x * speed;
+      this.y += y * speed;
+    } else if (collision(this.x, this.y, this,size, player.x, player.y, player.width)) {
+      return;
+    }
   }
   clearProjectiles() {
     this.projectiles = [];
@@ -77,8 +124,27 @@ class Projectile {
   }
 }
 
+function collision(x1, y1, size1, x2, y2, size2) {
+  if (x1 + size1 >= x2 &&    // 1 right edge past 2 left
+  x1 <= x2 + size2 &&    // 1 left edge past 2 right
+  y1 + size1 >= y2 &&    // 1 top edge past 2 bottom
+  y1 <= y2 + size2) {    // 1 bottom edge past 2 top
+    return true;
+} else {
+  return false;
+}
+}
+
 function getAngle(x1, y1, x2, y2) {
   return Math.atan2(y2 - y1, x2 - x1);
+}
+
+function findDistance(player, enemy) {
+  return Math.abs(Math.sqrt((player.x - enemy.x)**2 + (player.y - enemy.y)**2));
+}
+
+function generateCoordinate(max) {
+  return Math.floor(Math.random() * max);
 }
 
 function handleMovement() {
@@ -263,6 +329,12 @@ let player = new Player();
 let enemy = new Bot();
 enemy.x = generateCoordinate(WIDTH - enemy.size);
 enemy.y = generateCoordinate(HEIGHT - enemy.size);
+
+let shield = new Image();
+shield.src = './sprites/shield.png';
+let projectileImage = document.createElement("img");
+// too lazy to make the gif animated
+projectileImage.src = './sprites/fireball.gif';
 
 window.addEventListener("keyup", function (e) {
   let key = e.key;
