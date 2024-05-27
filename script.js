@@ -474,7 +474,7 @@ function animate(timestamp) {
   handleProjectiles();
   if (player.hit && !player.parry.using) {
     lostHealth += damage;
-    // player.health -= damage;
+    player.health -= damage;
     healthbar.style.width = 900 - lostHealth + "px";
     player.hit = false;
   }
