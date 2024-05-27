@@ -1,25 +1,29 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-
 const startButton = document.getElementById("startButton");
-let menu = document.getElementById("start-menu");
+const menu = document.getElementById("start-menu");
 const canvasContainer = document.getElementById("canvas-container");
-
-let lostHealth = 0;
-let healthbarContainer = document.querySelector(".healthbar-container");
 const healthbar = document.getElementById("healthbar");
-
-let difficulty = document.getElementById("difficulty");
-
-let enemyCooldown = 100; // 100 is default value (easy difficulty)
-
+const difficulty = document.getElementById("difficulty");
 const WIDTH = 900;
 const HEIGHT = 450;
-
-const size = 15;
+const size = 15; // player and enemy hitboxes are size * size
 const movespeed = 2;
+const damage = 10; // amount of dmg a projectile does
+let lostHealth = 0;
+let healthbarContainer = document.querySelector(".healthbar-container");
+let enemyCooldown = 100;
+
+const spriteSheet = new Image();
+spriteSheet.src = './sprites/Character_sheet.png';
 
 
+const FRAME_WIDTH = 1000 / 10;
+const FRAME_HEIGHT = 1000 / 11;
+const NUM_FRAMES = 4;
+let currentFrame = 0;
+let frameCount = 0;
+const FRAME_SPEED = 5;
 
 class Player {
   constructor() {
@@ -56,9 +60,8 @@ class Player {
     };
   }
   draw() {
-    ctx.beginPath();
+    ctx.fillStyle = "blue";
     ctx.fillRect(this.x, this.y, this.width, this.height);
-    ctx.stroke();
   }
   resetDirections() {
     this.direction.right = false;
@@ -82,12 +85,12 @@ class Bot {
       left: false,
       right: false
     };
-    this.projectile = {
+    this.burst = {
       cooldown: 0,
       iterations: 0,
       active: false
     };
-    this.attack1 = {
+    this.circleAttack = {
       cooldown: 0
     };
     this.teleportAttack = {
@@ -101,9 +104,16 @@ class Bot {
     };
   }
   draw() {
-    ctx.beginPath();
-    ctx.fillRect(this.x, this.y, this.size, this.size);
-    ctx.stroke();
+    ctx.drawImage(
+      spriteSheet,
+      currentFrame * FRAME_WIDTH, 0, FRAME_WIDTH, FRAME_HEIGHT,
+      this.x - FRAME_WIDTH/2.5, this.y - FRAME_WIDTH/2.5, FRAME_WIDTH, FRAME_HEIGHT
+    );
+    frameCount++;
+    if (frameCount >= FRAME_SPEED) {
+      frameCount = 0;
+      currentFrame = (currentFrame + 1) % NUM_FRAMES;
+    }
   }
   follow(player, speed) {
     if (!collision(this.x, this.y, this,size, player.x, player.y, player.width)) {
@@ -125,19 +135,11 @@ class Projectile {
   constructor(x, y, type, size, speed, angle) {
     this.x = x;
     this.y = y;
-    this.type = type
+    this.type = type;
     this.size = size;
     this.speed = speed;
     this.angle = angle;
   }
-}
-
-async function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function getAngle(x1, y1, x2, y2) {
-  return Math.atan2(y2 - y1, x2 - x1);
 }
 
 function collision(x1, y1, size1, x2, y2, size2) {
@@ -149,6 +151,10 @@ function collision(x1, y1, size1, x2, y2, size2) {
 } else {
   return false;
 }
+}
+
+function getAngle(x1, y1, x2, y2) {
+  return Math.atan2(y2 - y1, x2 - x1);
 }
 
 function findDistance(player, enemy) {
@@ -243,7 +249,6 @@ function handleParry() {
 }
 
 function createSingleAttack() {
-  
   let projectile = new Projectile(0, 0, 0, 10, 8, -1)
 
   projectile.x = enemy.x;
@@ -312,37 +317,16 @@ function handleEnemyTeleportAttack() {
 }
 
 function handleHits() {
-  // single attack
-  for (let index = 0; index < enemy.projectile.array.length; index++) {
-    let projectile = enemy.projectile.array[index];
-    if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
-      player.hit = true;
-    }
-  }
-  // circle attack
-  enemy.attack1.array.forEach(attack => {
-    attack.forEach(projectile => {
-      if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
-        player.hit = true;
-      }
-    })
-  })
-  // teleport attack
-  if (collision(player.x, player.y, player.width, enemy.x, enemy.y, enemy.size)) {
-    player.hit = true;
-  }
-}
-
-function handleHitsNew() {
   // hit by projectile
   for (let i = 0; i < enemy.projectiles.length; i++) {
     let projectile = enemy.projectiles[i];
     if (player.parry.using) {
       if (collision(player.parry.hitbox.x, player.parry.hitbox.y, player.parry.hitbox.size,
         projectile.x, projectile.y, projectile.size)) {
+          // test different ways of handling the deflection of projectile
           // enemy.projectiles.splice(i, 1);
-          console.log("deflect");
-          projectile.angle += 180;
+          // projectile.angle += 180
+          projectile.angle = getAngle(player.x, player.y, enemy.x, enemy.y);
         }
     } else if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
       player.hit = true;
@@ -360,9 +344,8 @@ function drawObjects() {
   enemy.draw();
 }
 
-
-let player = new Player;
-let enemy = new Bot;
+let player = new Player();
+let enemy = new Bot();
 enemy.x = generateCoordinate(WIDTH - enemy.size);
 enemy.y = generateCoordinate(HEIGHT - enemy.size);
 
@@ -372,7 +355,7 @@ let projectileImage = document.createElement("img");
 // too lazy to make the gif animated
 projectileImage.src = './sprites/fireball.gif';
 
-window.addEventListener("keyup", function(e) {
+window.addEventListener("keyup", function (e) {
   let key = e.key;
   // turn key to lowercase so it works if user has capslock
   if (key.length === 1) { // only if the length is 1, otherwise arrowkeys wont get registered
@@ -395,9 +378,9 @@ window.addEventListener("keyup", function(e) {
       player.parry.using = false;
       break;
   }
-})
+});
 
-window.addEventListener("keydown", function(e) {
+window.addEventListener("keydown", function (e) {
   let key = e.key;
     // turn key to lowercase so it works if user has capslock
   if (key.length === 1) { // only if the length is 1, otherwise arrowkeys wont get registered
@@ -405,19 +388,19 @@ window.addEventListener("keydown", function(e) {
   }
   switch (key) {
     case "ArrowRight":
-      player.resetDirections();
+      player.direction.left = false;
       player.direction.right = true;
       break;
     case "ArrowLeft":
-      player.resetDirections();
+      player.direction.right = false;
       player.direction.left = true;
       break;
     case "ArrowUp":
-      player.resetDirections();
+      player.direction.down = false;
       player.direction.up = true;
       break;
     case "ArrowDown":
-      player.resetDirections();
+      player.direction.up = false;
       player.direction.down = true;
       break;
     case "w":
@@ -426,6 +409,7 @@ window.addEventListener("keydown", function(e) {
     case "e":
       createCircleAttack();
       break;
+    // enemy's attacks, (for testing)
     case "c":
       enemy.teleportAttack.used = true;
       break;
@@ -439,43 +423,44 @@ window.addEventListener("keydown", function(e) {
 });
 
 let lastTimestamp = 0;
-const FPS = 30;
-const timestep = 1000 / FPS;
+let maxFPS = 75;
+let timestep = 1000 / maxFPS
 
 function animate(timestamp) {
   if (timestamp - lastTimestamp < timestep) {
     requestAnimationFrame(animate);
     return;
   }
-  lastTimestamp = timestep;
+  lastTimestamp = timestamp;
 
   ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-  if (enemy.attack1.cooldown == enemyCooldown) {
+  if (enemy.circleAttack.cooldown == enemyCooldown) {
     let num = Math.floor(Math.random() * 4);
     if (num == 3) {
       enemy.teleportAttack.used = true;
     }
     createCircleAttack();
-    enemy.attack1.cooldown = 0;
+    enemy.circleAttack.cooldown = 0;
   }
-  enemy.attack1.cooldown++;
+  enemy.circleAttack.cooldown++;
 
-  if (enemy.projectile.active) {
-    if (enemy.projectile.iterations <= 60) {
+  if (enemy.burst.active) {
+    // create one projectile for the burst each frame until there are "enemyCooldown" amount of burst projectiles
+    if (enemy.burst.iterations <= enemyCooldown) {
       createSingleAttack();
-      enemy.projectile.iterations++;
+      enemy.burst.iterations++;
     } else {
-      enemy.projectile.iterations = 0;
-      enemy.projectile.active = false;
+      enemy.burst.iterations = 0;
+      enemy.burst.active = false;
     }
   }
 
-  if (enemy.projectile.cooldown == 2 * enemyCooldown) {
-    enemy.projectile.active = true;
-    enemy.projectile.cooldown = 0;
+  if (enemy.burst.cooldown == 2 * enemyCooldown) {
+    enemy.burst.active = true;
+    enemy.burst.cooldown = 0;
   }
-  enemy.projectile.cooldown++;
+  enemy.burst.cooldown++;
 
   drawObjects();
 
@@ -487,12 +472,12 @@ function animate(timestamp) {
   handleEnemyTeleportAttack();
 
   if (!player.immunityFrames.active) {
-    handleHitsNew();
+    handleHits();
   }
   handleProjectiles();
   if (player.hit && !player.parry.using) {
-    lostHealth += 5;
-    player.health -= 5;
+    lostHealth += damage;
+    player.health -= damage;
     healthbar.style.width = 900 - lostHealth + "px";
     player.hit = false;
   }
@@ -507,31 +492,34 @@ function animate(timestamp) {
     canvasContainer.style.display = "none";
     menu.style.display = "flex";
     healthbarContainer.style.display = "none";
-    lostHealth = 0;
-    player.health = 900;
     return;
   }
 
   requestAnimationFrame(animate);
 }
 
-document.getElementById("settingsButton").addEventListener("click", function() {
+document.getElementById("settingsButton").addEventListener("click", function () {
   document.querySelector(".settings-menu").style.display = "block";
 });
 
-document.getElementById("closeSettings").addEventListener("click", function() {
+document.getElementById("closeSettings").addEventListener("click", function () {
   document.querySelector(".settings-menu").style.display = "none";
 });
 
-startButton.addEventListener("click", function() {
+startButton.addEventListener("click", function () {
   menu.style.display = "none";
   canvasContainer.style.display = "block";
   healthbarContainer.style.display = "flex";
 
+  // reset stuff for when you play again
   enemy.clearProjectiles();
   enemy.x = generateCoordinate(WIDTH - enemy.size);
   enemy.y = generateCoordinate(HEIGHT - enemy.size);
-  enemy.attackCooldown = 0;
+  enemy.circleAttack.cooldown = 0;
+  enemy.burst.cooldown = 0;
+  lostHealth = 0;
+  player.health = 900;
+  healthbar.style.width = 900 + "px";
 
   switch (difficulty.value) {
     case "Easy":
@@ -546,4 +534,4 @@ startButton.addEventListener("click", function() {
   }
 
   animate();
-})
+});
