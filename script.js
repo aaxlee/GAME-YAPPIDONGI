@@ -7,7 +7,7 @@ const healthbar = document.getElementById("healthbar");
 const difficulty = document.getElementById("difficulty");
 const WIDTH = 900;
 const HEIGHT = 450;
-const size = 15;
+const size = 15; // player and enemy hitboxes are size * size
 const movespeed = 2;
 const damage = 10; // amount of dmg a projectile does
 let lostHealth = 0;
@@ -323,8 +323,10 @@ function handleHitsNew() {
     if (player.parry.using) {
       if (collision(player.parry.hitbox.x, player.parry.hitbox.y, player.parry.hitbox.size,
         projectile.x, projectile.y, projectile.size)) {
+          // test different ways of handling the deflection of projectile
           // enemy.projectiles.splice(i, 1);
-          projectile.angle += 180;
+          // projectile.angle += 180
+          projectile.angle = getAngle(player.x, player.y, enemy.x, enemy.y);
         }
     } else if (collision(projectile.x, projectile.y, projectile.size, player.x, player.y, player.width)) {
       player.hit = true;
@@ -386,19 +388,19 @@ window.addEventListener("keydown", function (e) {
   }
   switch (key) {
     case "ArrowRight":
-      player.resetDirections();
+      player.direction.left = false;
       player.direction.right = true;
       break;
     case "ArrowLeft":
-      player.resetDirections();
+      player.direction.right = false;
       player.direction.left = true;
       break;
     case "ArrowUp":
-      player.resetDirections();
+      player.direction.down = false;
       player.direction.up = true;
       break;
     case "ArrowDown":
-      player.resetDirections();
+      player.direction.up = false;
       player.direction.down = true;
       break;
     case "w":
@@ -407,6 +409,7 @@ window.addEventListener("keydown", function (e) {
     case "e":
       createCircleAttack();
       break;
+    // enemy's attacks, (for testing)
     case "c":
       enemy.teleportAttack.used = true;
       break;
