@@ -1,3 +1,4 @@
+// html stuff
 export const canvas = document.getElementById("canvas");
 export const ctx = canvas.getContext("2d");
 export const startButton = document.getElementById("startButton");
@@ -9,8 +10,6 @@ export const healthbarContainer = document.querySelector(".healthbar-container")
 export const settingsButton = document.getElementById("settingsButton");
 export const settingsMenu = document.querySelector(".settings-menu");
 export const closeSettings = document.getElementById("closeSettings");
-export const sound = document.getElementById("sound");
-export const music = document.getElementById("music");
 
 // Game Constants
 export const WIDTH = 900;
