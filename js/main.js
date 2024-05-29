@@ -32,6 +32,8 @@ function animate(timestamp) {
   }
   enemy.circleAttack.cooldown++;
 
+  handleEnemyTeleportAttack();
+
   if (enemy.burst.active) {
     if (enemy.burst.iterations <= enemyCooldown) {
       createSingleAttack();
@@ -55,7 +57,6 @@ function animate(timestamp) {
   handleDash();
   handleParry();
   drawAttacks();
-  handleEnemyTeleportAttack();
 
   if (!player.immunityFrames.active) {
     handleHits();
